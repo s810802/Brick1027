@@ -1,0 +1,6 @@
+{
+  "name": "經典打磚塊 (Brick Breaker)",
+  "description": "使用純 HTML5、CSS 與 JavaScript 打造的經典霓虹風格打磚塊街機遊戲，支援多關卡、道具掉落、合成音效與自訂連擊！",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

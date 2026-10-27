@@ -1,0 +1,243 @@
+<!doctype html>
+<html lang="zh-TW">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>經典打磚塊 (Brick Breaker)</title>
+    <meta name="description" content="使用純 HTML5、CSS 與 JavaScript 打造的經典霓虹風格打磚塊街機遊戲，支援多關卡、道具掉落、合成音效與自訂連擊！" />
+    <meta property="og:title" content="經典打磚塊 (Brick Breaker)" />
+    <meta property="og:description" content="使用純 HTML5、CSS 與 JavaScript 打造的經典霓虹風格打磚塊街機遊戲，支援多關卡、道具掉落、合成音效與自訂連擊！" />
+    <meta property="og:type" content="website" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <link rel="stylesheet" href="/src/index.css" />
+  </head>
+  <body class="bg-slate-950 text-slate-100 h-screen w-screen flex items-center justify-center p-1 sm:p-3 select-none overflow-hidden" data-state="title">
+    
+    <!-- 主遊戲容器 -->
+    <main id="game-container" class="relative w-full max-w-[820px] h-full max-h-[96vh] flex flex-col items-center justify-center mx-auto">
+      
+      <!-- 頂部 HUD 資訊列 (以 3 欄等比對齊避免小螢幕重疊) -->
+      <header id="game-hud" class="w-full grid grid-cols-3 items-center px-2 sm:px-3 py-1.5 sm:py-2 bg-slate-900/95 border border-slate-800 rounded-t-xl z-10 text-xs sm:text-sm shrink-0">
+        
+        <!-- 左側：生命與關卡 -->
+        <div class="flex items-center gap-1.5 sm:gap-2 justify-self-start">
+          <div class="flex items-center gap-0.5 sm:gap-1" id="hud-lives" aria-label="剩餘生命">
+            <span class="inline-block text-rose-500 text-sm sm:text-base">❤️</span>
+            <span class="inline-block text-rose-500 text-sm sm:text-base">❤️</span>
+            <span class="inline-block text-rose-500 text-sm sm:text-base">❤️</span>
+          </div>
+          <span id="hud-level" class="px-1.5 py-0.5 rounded bg-slate-800 font-bold text-sky-400 tracking-wide border border-slate-700 text-[10px] sm:text-xs">第 1 關</span>
+        </div>
+
+        <!-- 中間：分數與最高分 (絕對置中) -->
+        <div class="flex flex-col items-center justify-self-center text-center">
+          <div class="flex items-baseline gap-1">
+            <span class="text-slate-400 font-medium text-[9px] sm:text-xs">得分</span>
+            <span id="hud-score" class="tabular-nums font-black text-base sm:text-2xl text-transparent bg-clip-text bg-gradient-to-r from-sky-300 via-white to-cyan-300 drop-shadow-[0_0_8px_rgba(56,189,248,0.5)]">0</span>
+          </div>
+          <span id="hud-high-score" class="tabular-nums text-[9px] sm:text-[10px] text-amber-400/90 font-mono">最高: 0</span>
+        </div>
+
+        <!-- 右側：連擊提示與控制按鈕 -->
+        <div class="flex items-center gap-1 sm:gap-1.5 justify-self-end">
+          <!-- 連擊徽章 -->
+          <div id="hud-combo" class="opacity-0 transition-all duration-300 px-1.5 py-0.5 rounded-full bg-amber-500/20 border border-amber-500/40 text-amber-300 font-semibold text-[10px] sm:text-xs shadow-[0_0_10px_rgba(245,158,11,0.2)] hidden sm:block">
+            連擊 <span class="text-amber-400 font-extrabold text-xs sm:text-sm">1x</span>
+          </div>
+
+          <!-- 音效切換 -->
+          <button id="btn-sound" type="button" aria-label="靜音 (M)" class="p-1 sm:p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 active:scale-95 text-slate-300 transition-colors border border-slate-700 cursor-pointer" tabindex="-1">
+            <svg id="sound-icon-on" class="w-3.5 h-3.5 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"></path>
+            </svg>
+            <svg id="sound-icon-off" class="w-3.5 h-3.5 sm:w-4 sm:h-4 hidden text-rose-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"></path>
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2"></path>
+            </svg>
+          </button>
+
+          <!-- 暫停按鈕 -->
+          <button id="btn-pause" type="button" aria-label="暫停 (P)" class="p-1 sm:p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 active:scale-95 text-slate-300 transition-colors border border-slate-700 cursor-pointer" tabindex="-1">
+            <svg class="w-3.5 h-3.5 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+            </svg>
+          </button>
+
+          <!-- 重新開始按鈕 -->
+          <button id="btn-restart" type="button" aria-label="重新開始 (R)" class="p-1 sm:p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 active:scale-95 text-slate-300 transition-colors border border-slate-700 cursor-pointer" tabindex="-1">
+            <svg class="w-3.5 h-3.5 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+            </svg>
+          </button>
+        </div>
+      </header>
+
+      <!-- 啟動中的道具展示條 -->
+      <div id="hud-powerups" class="w-full flex items-center justify-center gap-2 py-1 min-h-[26px] bg-slate-900/60 border-x border-slate-800/80 px-2 overflow-x-auto shrink-0">
+        <!-- 動態道具標籤 -->
+      </div>
+
+      <!-- 核心畫布區域 (保持 4:3 比例，高度適應視窗不溢出) -->
+      <div class="relative w-full aspect-[4/3] flex-1 min-h-0 rounded-b-xl overflow-hidden border border-slate-800 bg-[#080d1a] shadow-2xl">
+        <canvas id="game-canvas" class="w-full h-full block"></canvas>
+
+        <!-- 1. 開始遊戲 / 主選單畫面 -->
+        <div id="title-screen" class="absolute inset-0 bg-slate-950/90 backdrop-blur-md flex flex-col items-center justify-between p-6 sm:p-8 z-20 overflow-y-auto">
+          
+          <!-- 上方主標題徽章 -->
+          <div class="text-center mt-2 sm:mt-4">
+            <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-cyan-950/80 border border-cyan-500/30 text-cyan-400 text-xs tracking-wider uppercase mb-3 shadow-[0_0_12px_rgba(6,182,212,0.3)]">
+              <span>★ 經典街機體驗 · 霓虹風格 ★</span>
+            </div>
+            
+            <h1 class="text-4xl sm:text-6xl font-black tracking-wider text-transparent bg-clip-text bg-gradient-to-br from-cyan-300 via-sky-100 to-rose-400 drop-shadow-[0_0_25px_rgba(56,189,248,0.6)]">
+              BRICK BREAKER
+            </h1>
+            <p class="text-slate-400 text-sm sm:text-base mt-2 font-medium">
+              精準反彈 · 連鎖引爆 · 道具掉落狂歡
+            </p>
+          </div>
+
+          <!-- 道具圖鑑簡介 -->
+          <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5 my-3 max-w-xl w-full text-xs">
+            <div class="flex items-center gap-2 p-2 rounded-lg bg-slate-900/80 border border-slate-800 text-slate-300">
+              <span class="text-lg">⚡</span>
+              <div><strong class="text-sky-300 block">分身三球</strong>裂變多重攻擊</div>
+            </div>
+            <div class="flex items-center gap-2 p-2 rounded-lg bg-slate-900/80 border border-slate-800 text-slate-300">
+              <span class="text-lg">🔥</span>
+              <div><strong class="text-orange-300 block">貫穿火球</strong>無視碰撞直衝</div>
+            </div>
+            <div class="flex items-center gap-2 p-2 rounded-lg bg-slate-900/80 border border-slate-800 text-slate-300">
+              <span class="text-lg">🔫</span>
+              <div><strong class="text-rose-300 block">雷射巨砲</strong>雙管重擊射擊</div>
+            </div>
+            <div class="flex items-center gap-2 p-2 rounded-lg bg-slate-900/80 border border-slate-800 text-slate-300">
+              <span class="text-lg">🛡️</span>
+              <div><strong class="text-cyan-300 block">防墜護盾</strong>底線安全反彈</div>
+            </div>
+          </div>
+
+          <!-- 開始遊戲 CTA -->
+          <div class="flex flex-col items-center gap-3 w-full max-w-xs">
+            <button id="btn-start" data-start="true" type="button" class="w-full py-3.5 px-6 rounded-xl font-black text-lg text-slate-950 bg-gradient-to-r from-cyan-400 via-sky-300 to-indigo-300 hover:brightness-110 active:scale-95 transition-all shadow-[0_0_25px_rgba(6,182,212,0.6)] cursor-pointer animate-pulse-glow">
+              開始遊戲 (Enter / Space)
+            </button>
+            <span class="text-slate-500 text-xs">點擊按鈕或按下空白鍵即可發球出擊</span>
+          </div>
+
+          <!-- 控制操作提示 -->
+          <div class="text-center text-slate-400 text-xs border-t border-slate-800/80 pt-3 w-full">
+            <p class="font-mono text-[11px] sm:text-xs text-slate-400">
+              鍵盤 A / D 或 左右方向鍵 移動 · 滑鼠左右滑動跟隨 · 空白鍵 / 點擊發球與開砲
+            </p>
+          </div>
+        </div>
+
+        <!-- 2. 暫停視窗 -->
+        <div id="pause-modal" class="hidden absolute inset-0 bg-slate-950/85 backdrop-blur-sm flex items-center justify-center p-4 z-20">
+          <div class="bg-slate-900 border border-slate-700/80 rounded-2xl p-6 sm:p-8 max-w-sm w-full text-center shadow-[0_0_35px_rgba(0,0,0,0.8)]">
+            <div class="inline-block p-3 rounded-full bg-slate-800 border border-slate-700 text-sky-400 mb-3">
+              <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+              </svg>
+            </div>
+            <h2 class="text-2xl font-black text-slate-100 tracking-wide mb-1">遊戲已暫停</h2>
+            <p class="text-slate-400 text-xs mb-6">隨時按下 P 鍵或點選下方按鈕繼續</p>
+
+            <div class="flex flex-col gap-2.5">
+              <button id="btn-resume" type="button" class="w-full py-2.5 px-4 rounded-xl font-bold bg-sky-500 hover:bg-sky-400 text-slate-950 transition active:scale-95 cursor-pointer shadow-[0_0_15px_rgba(14,165,233,0.4)]">
+                繼續遊戲
+              </button>
+              <button id="btn-pause-restart" type="button" class="w-full py-2.5 px-4 rounded-xl font-semibold bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition active:scale-95 cursor-pointer">
+                重新開始 (R)
+              </button>
+              <button id="btn-pause-title" type="button" class="w-full py-2.5 px-4 rounded-xl font-semibold text-slate-400 hover:text-slate-200 transition text-xs cursor-pointer">
+                返回主選單
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- 3. 遊戲結束 (失敗) 視窗 -->
+        <div id="gameover-modal" class="hidden absolute inset-0 bg-slate-950/90 backdrop-blur-md flex items-center justify-center p-4 z-20">
+          <div class="bg-slate-900 border border-rose-900/60 rounded-2xl p-6 sm:p-8 max-w-sm w-full text-center shadow-[0_0_40px_rgba(225,29,72,0.3)]">
+            <div class="text-4xl mb-2">💥</div>
+            <h2 class="text-2xl font-black text-rose-400 tracking-wide mb-1">挑戰結束</h2>
+            <p class="text-slate-400 text-xs mb-5">防線瓦解，但下一次你會更快更準！</p>
+
+            <!-- 結算數據 -->
+            <div class="grid grid-cols-3 gap-2 bg-slate-950/60 p-3 rounded-xl border border-slate-800 mb-6 text-center">
+              <div>
+                <span class="block text-[10px] text-slate-500 uppercase font-bold">最終得分</span>
+                <span id="go-score" class="text-base sm:text-lg font-black text-amber-300 font-mono">0</span>
+              </div>
+              <div>
+                <span class="block text-[10px] text-slate-500 uppercase font-bold">最高連擊</span>
+                <span id="go-max-combo" class="text-base sm:text-lg font-black text-sky-400 font-mono">1x</span>
+              </div>
+              <div>
+                <span class="block text-[10px] text-slate-500 uppercase font-bold">摧毀磚塊</span>
+                <span id="go-bricks" class="text-base sm:text-lg font-black text-emerald-400 font-mono">0</span>
+              </div>
+            </div>
+
+            <div class="flex flex-col gap-2.5">
+              <button id="btn-retry" data-start="true" type="button" class="w-full py-3 px-4 rounded-xl font-bold bg-gradient-to-r from-rose-500 to-amber-500 hover:brightness-110 text-white transition active:scale-95 cursor-pointer shadow-[0_0_20px_rgba(244,63,94,0.4)]">
+                再玩一次 (Space)
+              </button>
+              <button id="btn-gameover-title" type="button" class="w-full py-2.5 px-4 rounded-xl font-semibold text-slate-400 hover:text-slate-200 transition text-xs cursor-pointer">
+                返回主選單
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- 4. 全破通關 (勝利) 視窗 -->
+        <div id="victory-modal" class="hidden absolute inset-0 bg-slate-950/90 backdrop-blur-md flex items-center justify-center p-4 z-20">
+          <div class="bg-slate-900 border border-emerald-500/50 rounded-2xl p-6 sm:p-8 max-w-sm w-full text-center shadow-[0_0_40px_rgba(16,185,129,0.4)]">
+            <div class="text-5xl mb-2 animate-bounce">🏆</div>
+            <h2 class="text-2xl font-black text-emerald-400 tracking-wide mb-1">★ 全關卡突破 ★</h2>
+            <p class="text-slate-400 text-xs mb-5">恭喜擊破所有防禦陣列，榮登打磚塊之王！</p>
+
+            <!-- 結算數據 -->
+            <div class="grid grid-cols-3 gap-2 bg-slate-950/60 p-3 rounded-xl border border-slate-800 mb-6 text-center">
+              <div>
+                <span class="block text-[10px] text-slate-500 uppercase font-bold">總分</span>
+                <span id="vic-score" class="text-base sm:text-lg font-black text-amber-300 font-mono">0</span>
+              </div>
+              <div>
+                <span class="block text-[10px] text-slate-500 uppercase font-bold">最高連擊</span>
+                <span id="vic-max-combo" class="text-base sm:text-lg font-black text-sky-400 font-mono">1x</span>
+              </div>
+              <div>
+                <span class="block text-[10px] text-slate-500 uppercase font-bold">擊碎數</span>
+                <span id="vic-bricks" class="text-base sm:text-lg font-black text-emerald-400 font-mono">0</span>
+              </div>
+            </div>
+
+            <div class="flex flex-col gap-2.5">
+              <button id="btn-victory-retry" data-start="true" type="button" class="w-full py-3 px-4 rounded-xl font-bold bg-gradient-to-r from-emerald-500 via-teal-400 to-cyan-500 hover:brightness-110 text-slate-950 transition active:scale-95 cursor-pointer shadow-[0_0_25px_rgba(16,185,129,0.5)]">
+                再次挑戰 (Space)
+              </button>
+              <button id="btn-victory-title" type="button" class="w-full py-2.5 px-4 rounded-xl font-semibold text-slate-400 hover:text-slate-200 transition text-xs cursor-pointer">
+                返回主選單
+              </button>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- 底部操作小助手提示 -->
+      <footer class="w-full py-2 px-3 text-center text-[11px] text-slate-500 flex items-center justify-between">
+        <span>經典打磚塊 · HTML5 / CSS / 純 JavaScript 構建</span>
+        <span class="hidden sm:inline">P 暫停 · M 靜音 · R 重新開局</span>
+      </footer>
+
+    </main>
+
+    <!-- 遊戲入口腳本 (純 JavaScript ES 模組) -->
+    <script type="module" src="/src/game.js"></script>
+  </body>
+</html>
